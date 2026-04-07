@@ -349,7 +349,10 @@
     </div>
 
     <div id="homeScreen" class="screen active">
-      <h1>💪 Workout Tracker</h1>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">💪 Workout Tracker</h1>
+        <button onclick="showSettingsModal()" style="padding: 8px 12px; font-size: 18px; background: transparent; color: inherit;">⚙️</button>
+      </div>
 
       <div id="restartBanner" class="warning-box" style="display:none;">
         <h3 style="margin: 0 0 10px 0; color: #F97316;">🔄 Restart Mode Active</h3>
@@ -474,6 +477,36 @@
         <div id="formModalBody"></div>
       </div>
     </div>
+
+    <!-- INITIAL SETUP MODAL -->
+    <div id="setupModal" class="modal" style="background: rgba(0, 0, 0, 0.9);">
+      <div class="modal-content" style="width: 95%; max-width: 400px;">
+        <div style="text-align: center;">
+          <h2 style="margin: 0 0 20px 0;">💪 Welcome!</h2>
+          <p style="font-size: 14px; margin: 0 0 20px 0; opacity: 0.8;">Choose your style</p>
+          
+          <div style="margin-bottom: 25px;">
+            <p style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">THEME</p>
+            <div class="button-group" style="gap: 15px;">
+              <button onclick="selectTheme('dark')" id="setupThemeDark" style="flex: 1; padding: 15px; font-size: 30px; background: #2D2D2D; border: 3px solid transparent;">🌙</button>
+              <button onclick="selectTheme('light')" id="setupThemeLight" style="flex: 1; padding: 15px; font-size: 30px; background: #F5F5F5; border: 3px solid transparent; color: #000;">☀️</button>
+            </div>
+          </div>
+
+          <div>
+            <p style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">ACCENT COLOR</p>
+            <div class="button-group" style="gap: 10px; justify-content: center;">
+              <button onclick="selectAccentColor('blue')" id="setupColorBlue" style="width: 50px; height: 50px; border-radius: 50%; background: #3B82F6; border: 3px solid transparent; padding: 0;"></button>
+              <button onclick="selectAccentColor('green')" id="setupColorGreen" style="width: 50px; height: 50px; border-radius: 50%; background: #10B981; border: 3px solid transparent; padding: 0;"></button>
+              <button onclick="selectAccentColor('purple')" id="setupColorPurple" style="width: 50px; height: 50px; border-radius: 50%; background: #8B5CF6; border: 3px solid transparent; padding: 0;"></button>
+              <button onclick="selectAccentColor('orange')" id="setupColorOrange" style="width: 50px; height: 50px; border-radius: 50%; background: #F97316; border: 3px solid transparent; padding: 0;"></button>
+            </div>
+          </div>
+
+          <p style="font-size: 11px; opacity: 0.6; margin-top: 20px; margin-bottom: 0;">Auto-closing in <span id="setupCountdown">10</span>s</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -488,7 +521,8 @@
       schedule: null,
       sessions: [],
       isRestartMode: false,
-      restartWeek: 1
+      restartWeek: 1,
+      showedInitialSetup: false
     };
 
     // EXERCISE GIFs - For Day 2 & 3, copy the search text and paste into Google Images
@@ -579,6 +613,7 @@
         appState.accentColor = loaded.accentColor || 'blue';
         appState.isRestartMode = loaded.isRestartMode || false;
         appState.restartWeek = loaded.restartWeek || 1;
+        appState.showedInitialSetup = loaded.showedInitialSetup || false;
       }
 
       const savedSchedule = localStorage.getItem('workoutSchedule');
@@ -588,6 +623,11 @@
       appState.sessions = savedSessions ? JSON.parse(savedSessions) : [];
 
       applyTheme();
+      
+      // Show setup modal on first load
+      if (!appState.showedInitialSetup) {
+        showSetupModal();
+      }
     }
 
     function saveState() {
@@ -595,7 +635,8 @@
         theme: appState.theme,
         accentColor: appState.accentColor,
         isRestartMode: appState.isRestartMode,
-        restartWeek: appState.restartWeek
+        restartWeek: appState.restartWeek,
+        showedInitialSetup: appState.showedInitialSetup
       }));
       localStorage.setItem('workoutSchedule', JSON.stringify(appState.schedule));
       localStorage.setItem('workoutSessions', JSON.stringify(appState.sessions));
@@ -780,10 +821,18 @@
             </button>
           </div>
 
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <label style="margin: 0;">Weight Unit</label>
+            <div style="display: flex; gap: 5px;">
+              <button onclick="setExerciseUnit(${exIdx}, 'lbs')" id="unitBtn-${exIdx}-lbs" style="padding: 5px 10px; font-size: 12px; border-radius: 4px;">lbs</button>
+              <button onclick="setExerciseUnit(${exIdx}, 'kg')" id="unitBtn-${exIdx}-kg" style="padding: 5px 10px; font-size: 12px; border-radius: 4px;">kg</button>
+            </div>
+          </div>
+
           ${appState.currentSession.exercises[exIdx].sets.map((set, setIdx) => `
             <div class="set-input-group">
               <div>
-                <label>Set ${setIdx + 1} Weight (lbs)</label>
+                <label>Set ${setIdx + 1} Weight (${appState.currentSession.exercises[exIdx].unit || 'lbs'})</label>
                 <input type="number" placeholder="0" value="${set.weight || ''}" onchange="updateSet(${exIdx}, ${setIdx}, 'weight', this.value)" />
               </div>
               <div>
@@ -800,6 +849,11 @@
           ` : ''}
         </div>
       `).join('');
+      
+      // Update unit buttons after rendering
+      appState.currentSession.exercises.forEach((_, exIdx) => {
+        setTimeout(() => updateUnitButtons(exIdx), 50);
+      });
     }
 
     function updateSet(exIdx, setIdx, field, value) {
@@ -854,6 +908,99 @@
 
     function closeFormModal() {
       document.getElementById('formModal').classList.remove('active');
+    }
+
+    // SETUP MODAL FUNCTIONS
+    function showSetupModal() {
+      document.getElementById('setupModal').classList.add('active');
+      updateSetupUI();
+      
+      let countdown = 10;
+      const countdownInterval = setInterval(() => {
+        countdown--;
+        const el = document.getElementById('setupCountdown');
+        if (el) el.textContent = countdown;
+        
+        if (countdown <= 0) {
+          clearInterval(countdownInterval);
+          closeSetupModal();
+        }
+      }, 1000);
+    }
+
+    function closeSetupModal() {
+      document.getElementById('setupModal').classList.remove('active');
+    }
+
+    function selectTheme(theme) {
+      appState.theme = theme;
+      applyTheme();
+      updateSetupUI();
+    }
+
+    function selectAccentColor(color) {
+      appState.accentColor = color;
+      applyTheme();
+      updateSetupUI();
+    }
+
+    function updateSetupUI() {
+      // Update theme buttons
+      document.getElementById('setupThemeDark').style.borderColor = appState.theme === 'dark' ? accentColors[appState.accentColor] : 'transparent';
+      document.getElementById('setupThemeLight').style.borderColor = appState.theme === 'light' ? accentColors[appState.accentColor] : 'transparent';
+      
+      // Update color buttons
+      ['blue', 'green', 'purple', 'orange'].forEach(color => {
+        const btn = document.getElementById(`setupColor${color.charAt(0).toUpperCase() + color.slice(1)}`);
+        if (btn) {
+          btn.style.borderColor = appState.accentColor === color ? '#fff' : 'transparent';
+          btn.style.borderWidth = appState.accentColor === color ? '3px' : '3px';
+        }
+      });
+    }
+
+    // SETTINGS MODAL FUNCTIONS
+    function showSettingsModal() {
+      appState.showedInitialSetup = true;
+      saveState();
+      
+      const themeLabel = appState.theme === 'dark' ? '🌙 Dark' : '☀️ Light';
+      alert(`Current Settings:\n\nTheme: ${themeLabel}\nColor: ${appState.accentColor}\n\n(To change: close and reopen the app)`);
+    }
+
+    // WEIGHT UNIT FUNCTIONS
+    function setExerciseUnit(exIdx, unit) {
+      const exercise = appState.currentSession.exercises[exIdx];
+      const oldUnit = exercise.unit || 'lbs';
+      
+      // Convert all sets if switching units
+      if (oldUnit !== unit) {
+        const conversionFactor = (oldUnit === 'lbs' && unit === 'kg') ? 0.453592 : 2.20462;
+        exercise.sets.forEach(set => {
+          if (set.weight > 0) {
+            set.weight = Math.round((set.weight * conversionFactor) * 2) / 2; // Round to nearest 0.5
+          }
+        });
+      }
+      
+      exercise.unit = unit;
+      renderWorkoutScreen();
+      updateUnitButtons(exIdx);
+    }
+
+    function updateUnitButtons(exIdx) {
+      const unit = appState.currentSession.exercises[exIdx].unit || 'lbs';
+      const lbsBtn = document.getElementById(`unitBtn-${exIdx}-lbs`);
+      const kgBtn = document.getElementById(`unitBtn-${exIdx}-kg`);
+      
+      if (lbsBtn) {
+        lbsBtn.style.backgroundColor = unit === 'lbs' ? accentColors[appState.accentColor] : themes[appState.theme].cardBg;
+        lbsBtn.style.color = unit === 'lbs' ? '#fff' : 'inherit';
+      }
+      if (kgBtn) {
+        kgBtn.style.backgroundColor = unit === 'kg' ? accentColors[appState.accentColor] : themes[appState.theme].cardBg;
+        kgBtn.style.color = unit === 'kg' ? '#fff' : 'inherit';
+      }
     }
 
     function completeWorkout() {
