@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track your workouts, log sets/reps, and watch progress over time">
+  <meta name="theme-color" content="#3B82F6">
+  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Workout Tracker&quot;,&quot;short_name&quot;:&quot;Workouts&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#1A1A1A&quot;,&quot;theme_color&quot;:&quot;#3B82F6&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'&gt;&lt;rect fill='%233B82F6' width='192' height='192'/&gt;&lt;text x='50%' y='50%' font-size='120' font-weight='bold' text-anchor='middle' dominant-baseline='central' fill='white'&gt;💪&lt;/text&gt;&lt;/svg&gt;&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;,&quot;purpose&quot;:&quot;any&quot;}]}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>💪</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%233B82F6' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-weight='bold' text-anchor='middle' dominant-baseline='central' fill='white'>💪</text></svg>">
+  <title>Workout Tracker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body.dark-mode {
+      background-color: #1A1A1A;
+      color: #FFFFFF;
+    }
+
+    body.light-mode {
+      background-color: #FFFFFF;
+      color: #000000;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1, h2, h3 {
+      margin-bottom: 15px;
+    }
+
+    h1 { font-size: 28px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 18px; }
+
+    button {
+      font-family: inherit;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      padding: 12px 16px;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    input, select {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+    }
+
+    .dark-mode input, .dark-mode select {
+      background-color: #242424;
+      color: #FFFFFF;
+      border-color: #404040;
+    }
+
+    .light-mode input, .light-mode select {
+      background-color: #F9F9F9;
+      color: #000000;
+      border-color: #E5E5E5;
+    }
+
+    .card {
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid;
+    }
+
+    .dark-mode .card {
+      background-color: #2D2D2D;
+      border-color: #404040;
+    }
+
+    .light-mode .card {
+      background-color: #F5F5F5;
+      border-color: #E5E5E5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .grid-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .grid-full {
+      grid-template-columns: 1fr;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .button-group button {
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .timer {
+      text-align: center;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .timer-small {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+
+    .timer-label {
+      font-size: 12px;
+      opacity: 0.9;
+      margin-bottom: 5px;
+    }
+
+    .exercise-item {
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      border-left: 3px solid;
+    }
+
+    .dark-mode .exercise-item {
+      background-color: #242424;
+    }
+
+    .light-mode .exercise-item {
+      background-color: #F9F9F9;
+    }
+
+    .exercise-name {
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .exercise-meta {
+      font-size: 12px;
+      margin: 3px 0 0 0;
+      opacity: 0.7;
+    }
+
+    .set-input-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 5px;
+      opacity: 0.7;
+    }
+
+    .warning-box {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      border-left: 4px solid;
+    }
+
+    .dark-mode .warning-box {
+      background-color: #2D2D2D;
+      border-left-color: #F97316;
+    }
+
+    .light-mode .warning-box {
+      background-color: #FFF7ED;
+      border-left-color: #F97316;
+    }
+
+    .success-box {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      border-left: 4px solid;
+    }
+
+    .dark-mode .success-box {
+      background-color: #2D2D2D;
+      border-left-color: #10B981;
+    }
+
+    .light-mode .success-box {
+      background-color: #F0FDF4;
+      border-left-color: #10B981;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      border-radius: 8px;
+      width: 90%;
+      max-width: 480px;
+      max-height: 80vh;
+      overflow: auto;
+      padding: 20px;
+    }
+
+    .dark-mode .modal-content {
+      background-color: #1A1A1A;
+    }
+
+    .light-mode .modal-content {
+      background-color: #FFFFFF;
+    }
+
+    .close-btn {
+      background: transparent;
+      color: inherit;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      font-size: 13px;
+      border-top: 1px solid;
+    }
+
+    .dark-mode .history-item {
+      border-color: #404040;
+    }
+
+    .light-mode .history-item {
+      border-color: #E5E5E5;
+    }
+
+    .history-item:first-child {
+      border-top: none;
+    }
+
+    .reference-box {
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-size: 12px;
+      border-left: 3px solid;
+    }
+
+    .dark-mode .reference-box {
+      background-color: #242424;
+    }
+
+    .light-mode .reference-box {
+      background-color: #F9F9F9;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 0 4px 4px 0;
+    }
+
+    .badge-warning {
+      background-color: #FEF08A;
+      color: #92400E;
+    }
+
+    .badge-success {
+      background-color: #D1FAE5;
+      color: #065F46;
+    }
+  </style>
+</head>
+<body class="dark-mode">
+  <div class="container">
+    <div id="installPrompt" style="display: none; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+      <p style="margin: 0 0 10px 0; font-size: 14px;">💾 Install app to home screen</p>
+      <button id="installBtn" style="background: white; color: #667eea; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">Install Now</button>
+    </div>
+
+    <div id="homeScreen" class="screen active">
+      <h1>💪 Workout Tracker</h1>
+
+      <div id="restartBanner" class="warning-box" style="display:none;">
+        <h3 style="margin: 0 0 10px 0; color: #F97316;">🔄 Restart Mode Active</h3>
+        <p style="margin: 0 0 10px 0; font-size: 13px;">
+          Week <span id="restartWeekDisplay">1</span> of 2: Light weights, 2 sets per exercise
+        </p>
+        <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+          Use 50-60% of your normal weight. Focus on form, not strength.
+        </p>
+      </div>
+
+      <div class="card">
+        <label>Theme</label>
+        <div class="button-group" id="themeButtons"></div>
+
+        <label style="margin-top: 15px;">Accent Color</label>
+        <div class="button-group" id="accentButtons"></div>
+      </div>
+
+      <div class="card">
+        <label style="margin-bottom: 10px;">Training Mode</label>
+        <div class="button-group">
+          <button onclick="setTrainingMode('normal')" id="normalModeBtn" style="flex: 1;">Normal</button>
+          <button onclick="showRestartModal()" id="restartModeBtn" style="flex: 1; margin-left: 10px;">🔄 Restart Mode</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Today's Workout</h2>
+        <div class="grid grid-full" id="dayButtons"></div>
+      </div>
+
+      <div class="flex">
+        <button class="flex-fill" onclick="showScreen('progressScreen')" style="flex: 1;">📊 Progress</button>
+        <button class="flex-fill" onclick="showScreen('scheduleScreen')" style="flex: 1; margin-left: 10px;">⚙️ Schedule</button>
+      </div>
+    </div>
+
+    <div id="workoutScreen" class="screen">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 id="workoutDay" style="margin: 0;"></h2>
+        <button class="close-btn" onclick="cancelWorkout()">✕</button>
+      </div>
+
+      <div id="restartInfo" class="warning-box" style="display:none; margin-bottom: 15px;">
+        <strong>Restart Mode Week <span id="restartWeekInfo">1</span></strong>
+        <p style="margin: 5px 0 0 0; font-size: 12px;">2 sets per exercise. 50-60% normal weight.</p>
+      </div>
+
+      <div id="sessionTimer" class="timer"></div>
+
+      <div id="exercisesList"></div>
+
+      <button onclick="completeWorkout()" style="width: 100%; padding: 15px; font-weight: 600; margin-top: 20px; font-size: 16px;">✓ Complete Workout</button>
+    </div>
+
+    <div id="progressScreen" class="screen">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">📊 Progress</h2>
+        <button onclick="showScreen('homeScreen')" style="padding: 8px 16px;">Back</button>
+      </div>
+
+      <div class="card">
+        <label>Select Exercise</label>
+        <select id="exerciseSelect" onchange="updateProgressChart()"></select>
+      </div>
+
+      <div id="progressContent"></div>
+    </div>
+
+    <div id="scheduleScreen" class="screen">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">⚙️ Schedule</h2>
+        <button onclick="showScreen('homeScreen')" style="padding: 8px 16px;">Back</button>
+      </div>
+
+      <div id="scheduleContent"></div>
+    </div>
+
+    <div id="restartModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🔄 Restart Mode Setup</h3>
+          <button class="close-btn" onclick="closeRestartModal()">✕</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 15px;">
+          <h3 style="margin-top: 0;">Back After a Break?</h3>
+          <p style="margin: 10px 0; font-size: 13px;">
+            Use this mode if you're returning to the gym after 2+ weeks off. It automatically reduces sets and reminds you to use lighter weight.
+          </p>
+        </div>
+
+        <div class="card" style="margin-bottom: 15px;">
+          <label>Which week are you starting?</label>
+          <div class="grid grid-2" style="margin-top: 10px;">
+            <button onclick="startRestartMode(1)" style="background-color: #3B82F6; color: white;">Week 1</button>
+            <button onclick="startRestartMode(2)" style="background-color: #3B82F6; color: white;">Week 2</button>
+          </div>
+        </div>
+
+        <div class="success-box">
+          <strong>What Changes:</strong>
+          <ul style="margin: 10px 0 0 0; padding-left: 20px; font-size: 12px;">
+            <li>2 sets instead of 3</li>
+            <li>Use 50-60% of your normal weight</li>
+            <li>App reminds you each session</li>
+            <li>After 2 weeks: switch back to normal</li>
+          </ul>
+        </div>
+
+        <button onclick="closeRestartModal()" style="width: 100%; margin-top: 15px;">Not Right Now</button>
+      </div>
+    </div>
+
+    <div id="formModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="formModalTitle" style="margin: 0;"></h3>
+          <button class="close-btn" onclick="closeFormModal()">✕</button>
+        </div>
+        <div id="formModalBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appState = {
+      theme: 'dark',
+      accentColor: 'blue',
+      currentScreen: 'homeScreen',
+      currentDay: null,
+      workoutStartTime: null,
+      exerciseStartTimes: {},
+      currentSession: null,
+      schedule: null,
+      sessions: [],
+      isRestartMode: false,
+      restartWeek: 1
+    };
+
+    // EXERCISE GIFs - For Day 2 & 3, copy the search text and paste into Google Images
+    const exerciseGIFs = {
+      // ===== DAY 1: HORIZONTAL (COMPLETE) =====
+      'chest-press-machine': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Chest-Press-Machine.gif',
+      'seated-cable-row': 'https://i0.wp.com/www.strengthlog.com/wp-content/uploads/2020/03/cable-row-seated-narrow-grip.gif?resize=600%2C600&ssl=1',
+      'chest-supported-row': 'https://fitliferegime.com/wp-content/uploads/2023/10/Chest-Supported-Neutral-Grip-Dumbbell-Row.gif',
+      'pec-deck-fly': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Pec-Deck-Fly.gif',
+      'reverse-pec-deck': 'https://www.inspireusafoundation.org/wp-content/uploads/2022/04/seated-reverse-fly.gif',
+      'tricep-pushdown': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Pushdown.gif',
+
+      // ===== DAY 2: LEGS =====
+      'leg-press': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/LEG_PRESS-1.gif',
+      'leg-extension': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/LEG-EXTENSION.gif',
+      'lying-hamstring-curl': 'https://app.aspira-fitness.com/api/media/867b209c-ad26-456a-af49-314e007e84d2',
+      'bulgarian-split-squat': 'https://fitnessprogramer.com/wp-content/uploads/2021/05/Dumbbell-Bulgarian-Split-Squat.gif',
+      'standing-calf-raise': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/STD_CALF_RAISE-1.gif',
+      'hyperextension': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/02/HPET.gif',
+
+      // ===== DAY 3: VERTICAL =====
+      'lat-pulldown': 'https://burnfit.io/wp-content/uploads/LAT_PULL_DOWN.gif',
+      'smith-ohp': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/SM_PRESS.gif',
+      'straight-arm-pulldown': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/CABLE_ARM_PULL_DOWN.gif',
+      'lateral-raise': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/LAT_RAISE_MC.gif',
+      'face-pulls': 'https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/FACE_PULL-1.gif'
+    };
+
+    const accentColors = {
+      blue: '#3B82F6',
+      green: '#10B981',
+      purple: '#8B5CF6',
+      orange: '#F97316'
+    };
+
+    const themes = {
+      dark: {
+        bg: '#1A1A1A',
+        secondary: '#2D2D2D',
+        text: '#FFFFFF',
+        textSecondary: '#B0B0B0',
+        border: '#404040',
+        cardBg: '#242424'
+      },
+      light: {
+        bg: '#FFFFFF',
+        secondary: '#F5F5F5',
+        text: '#000000',
+        textSecondary: '#666666',
+        border: '#E5E5E5',
+        cardBg: '#F9F9F9'
+      }
+    };
+
+    function getDefaultSchedule() {
+      return {
+        day1: [
+          { id: 'chest-press-machine', name: 'Chest Press Machine', sets: 3, reps: 8, type: 'compound' },
+          { id: 'seated-cable-row', name: 'Seated Cable Row', sets: 3, reps: 8, type: 'compound' },
+          { id: 'chest-supported-row', name: 'Chest-Supported Row', sets: 3, reps: 8, type: 'compound' },
+          { id: 'pec-deck-fly', name: 'Pec Deck Chest Fly', sets: 3, reps: 12, type: 'isolation' },
+          { id: 'reverse-pec-deck', name: 'Reverse Pec Deck', sets: 3, reps: 12, type: 'isolation' },
+          { id: 'tricep-pushdown', name: 'Tricep Pushdown Machine', sets: 3, reps: 12, type: 'isolation' }
+        ],
+        day2: [
+          { id: 'leg-press', name: 'Leg Press', sets: 3, reps: 8, type: 'compound' },
+          { id: 'leg-extension', name: 'Leg Extension', sets: 3, reps: 12, type: 'isolation' },
+          { id: 'lying-hamstring-curl', name: 'Lying Hamstring Curl', sets: 3, reps: 12, type: 'isolation' },
+          { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squats', sets: 3, reps: 10, type: 'compound' },
+          { id: 'standing-calf-raise', name: 'Standing Calf Raise', sets: 3, reps: 15, type: 'isolation' },
+          { id: 'hyperextension', name: 'Hyperextension', sets: 3, reps: 10, type: 'compound' }
+        ],
+        day3: [
+          { id: 'lat-pulldown', name: 'Lat Pulldown', sets: 3, reps: 8, type: 'compound' },
+          { id: 'smith-ohp', name: 'Smith Machine OHP', sets: 3, reps: 8, type: 'compound' },
+          { id: 'straight-arm-pulldown', name: 'Straight Arm Pulldown', sets: 3, reps: 12, type: 'isolation' },
+          { id: 'lateral-raise', name: 'Lateral Raise Machine', sets: 3, reps: 12, type: 'isolation' },
+          { id: 'face-pulls', name: 'Face Pulls', sets: 3, reps: 15, type: 'isolation' }
+        ]
+      };
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('workoutTrackerState');
+      if (saved) {
+        const loaded = JSON.parse(saved);
+        appState.theme = loaded.theme || 'dark';
+        appState.accentColor = loaded.accentColor || 'blue';
+        appState.isRestartMode = loaded.isRestartMode || false;
+        appState.restartWeek = loaded.restartWeek || 1;
+      }
+
+      const savedSchedule = localStorage.getItem('workoutSchedule');
+      appState.schedule = savedSchedule ? JSON.parse(savedSchedule) : getDefaultSchedule();
+
+      const savedSessions = localStorage.getItem('workoutSessions');
+      appState.sessions = savedSessions ? JSON.parse(savedSessions) : [];
+
+      applyTheme();
+    }
+
+    function saveState() {
+      localStorage.setItem('workoutTrackerState', JSON.stringify({
+        theme: appState.theme,
+        accentColor: appState.accentColor,
+        isRestartMode: appState.isRestartMode,
+        restartWeek: appState.restartWeek
+      }));
+      localStorage.setItem('workoutSchedule', JSON.stringify(appState.schedule));
+      localStorage.setItem('workoutSessions', JSON.stringify(appState.sessions));
+    }
+
+    function setTheme(theme) {
+      appState.theme = theme;
+      applyTheme();
+      saveState();
+      renderHomeScreen();
+    }
+
+    function setAccentColor(color) {
+      appState.accentColor = color;
+      applyTheme();
+      saveState();
+      renderHomeScreen();
+    }
+
+    function applyTheme() {
+      document.body.className = appState.theme + '-mode';
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      appState.currentScreen = screenId;
+
+      if (screenId === 'homeScreen') renderHomeScreen();
+      if (screenId === 'progressScreen') renderProgressScreen();
+      if (screenId === 'scheduleScreen') renderScheduleScreen();
+    }
+
+    function showRestartModal() {
+      document.getElementById('restartModal').classList.add('active');
+    }
+
+    function closeRestartModal() {
+      document.getElementById('restartModal').classList.remove('active');
+    }
+
+    function startRestartMode(week) {
+      appState.isRestartMode = true;
+      appState.restartWeek = week;
+      saveState();
+      closeRestartModal();
+      renderHomeScreen();
+    }
+
+    function setTrainingMode(mode) {
+      if (mode === 'normal') {
+        appState.isRestartMode = false;
+      } else {
+        showRestartModal();
+        return;
+      }
+      saveState();
+      renderHomeScreen();
+    }
+
+    function endRestartMode() {
+      appState.isRestartMode = false;
+      appState.restartWeek = 1;
+      saveState();
+      renderHomeScreen();
+    }
+
+    setInterval(() => {
+      if (appState.workoutStartTime) {
+        const elapsed = Math.floor((Date.now() - appState.workoutStartTime) / 1000);
+        const timer = document.getElementById('sessionTimer');
+        if (timer) {
+          const mins = Math.floor(elapsed / 60);
+          const secs = elapsed % 60;
+          timer.innerHTML = `<div class="timer-label">Total Session Time</div><div class="timer-small">${mins}m ${secs}s</div>`;
+        }
+      }
+
+      Object.keys(appState.exerciseStartTimes).forEach(idx => {
+        const elapsed = Math.floor((Date.now() - appState.exerciseStartTimes[idx]) / 1000);
+        const timerEl = document.getElementById(`exerciseTimer-${idx}`);
+        if (timerEl) {
+          const mins = Math.floor(elapsed / 60);
+          const secs = elapsed % 60;
+          timerEl.innerHTML = `${mins}m ${secs}s`;
+        }
+      });
+    }, 100);
+
+    function renderHomeScreen() {
+      const restartBanner = document.getElementById('restartBanner');
+      const normalModeBtn = document.getElementById('normalModeBtn');
+      const restartModeBtn = document.getElementById('restartModeBtn');
+      
+      if (appState.isRestartMode) {
+        restartBanner.style.display = 'block';
+        document.getElementById('restartWeekDisplay').textContent = appState.restartWeek;
+        normalModeBtn.style.opacity = '0.5';
+        restartModeBtn.style.opacity = '1';
+      } else {
+        restartBanner.style.display = 'none';
+        normalModeBtn.style.opacity = '1';
+        restartModeBtn.style.opacity = '0.5';
+      }
+
+      const themeButtons = document.getElementById('themeButtons');
+      themeButtons.innerHTML = `
+        <button onclick="setTheme('dark')">Dark</button>
+        <button onclick="setTheme('light')">Light</button>
+      `;
+
+      const accentButtons = document.getElementById('accentButtons');
+      accentButtons.innerHTML = Object.keys(accentColors).map(color => 
+        `<button onclick="setAccentColor('${color}')">${color}</button>`
+      ).join('');
+
+      const dayButtons = document.getElementById('dayButtons');
+      const setsText = appState.isRestartMode ? '2 sets' : '3 sets';
+      dayButtons.innerHTML = `
+        <button onclick="startWorkout(1)" style="width: 100%; margin-bottom: 10px;">Day 1 — Horizontal</button>
+        <button onclick="startWorkout(2)" style="width: 100%; margin-bottom: 10px;">Day 2 — Legs</button>
+        <button onclick="startWorkout(3)" style="width: 100%;">Day 3 — Vertical</button>
+      `;
+    }
+
+    function startWorkout(day) {
+      appState.currentDay = day;
+      const dayKey = `day${day}`;
+      const dayExercises = appState.schedule[dayKey];
+      
+      const sets = appState.isRestartMode ? 2 : 3;
+
+      appState.currentSession = {
+        date: new Date().toISOString().split('T')[0],
+        day,
+        exercises: dayExercises.map(ex => ({
+          ...ex,
+          sets: Array(sets).fill().map(() => ({ weight: 0, reps: 0 })),
+          exerciseTime: 0
+        })),
+        isRestartMode: appState.isRestartMode,
+        restartWeek: appState.restartWeek,
+        id: Date.now().toString()
+      };
+
+      appState.workoutStartTime = Date.now();
+      appState.exerciseStartTimes = {};
+      renderWorkoutScreen();
+      showScreen('workoutScreen');
+    }
+
+    function renderWorkoutScreen() {
+      const dayNames = ['Horizontal', 'Legs', 'Vertical'];
+      document.getElementById('workoutDay').textContent = `Day ${appState.currentDay} — ${dayNames[appState.currentDay - 1]}`;
+
+      const restartInfo = document.getElementById('restartInfo');
+      if (appState.isRestartMode) {
+        restartInfo.style.display = 'block';
+        document.getElementById('restartWeekInfo').textContent = appState.restartWeek;
+      } else {
+        restartInfo.style.display = 'none';
+      }
+
+      const list = document.getElementById('exercisesList');
+      list.innerHTML = appState.currentSession.exercises.map((ex, exIdx) => `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+              <p class="exercise-name">${ex.name}</p>
+              <p class="exercise-meta">${ex.type === 'compound' ? '💪 Compound' : '🎯 Isolation'} • Target: ${ex.reps} reps</p>
+            </div>
+            <button onclick="showFormModal(${exIdx})" style="padding: 6px 12px; font-size: 12px;">📹 Form</button>
+          </div>
+
+          <div style="background-color: ${themes[appState.theme].cardBg}; padding: 10px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="font-size: 11px; margin: 0; opacity: 0.7;">Exercise Time</p>
+              <p id="exerciseTimer-${exIdx}" style="font-size: 16px; font-weight: 600; margin: 3px 0 0 0;">0m 0s</p>
+            </div>
+            <button onclick="toggleExerciseTimer(${exIdx})" style="padding: 8px 16px; font-size: 13px;">
+              ${appState.exerciseStartTimes[exIdx] ? '⏹ Stop' : '▶ Start'}
+            </button>
+          </div>
+
+          ${appState.currentSession.exercises[exIdx].sets.map((set, setIdx) => `
+            <div class="set-input-group">
+              <div>
+                <label>Set ${setIdx + 1} Weight (lbs)</label>
+                <input type="number" placeholder="0" value="${set.weight || ''}" onchange="updateSet(${exIdx}, ${setIdx}, 'weight', this.value)" />
+              </div>
+              <div>
+                <label>Reps</label>
+                <input type="number" placeholder="0" value="${set.reps || ''}" onchange="updateSet(${exIdx}, ${setIdx}, 'reps', this.value)" />
+              </div>
+            </div>
+          `).join('')}
+
+          ${getLastSessionData(ex.id) ? `
+            <div class="reference-box">
+              <strong>Last:</strong> ${getLastSessionData(ex.id).sets.map(s => `${s.weight}×${s.reps}`).join(', ')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    function updateSet(exIdx, setIdx, field, value) {
+      appState.currentSession.exercises[exIdx].sets[setIdx][field] = parseFloat(value) || 0;
+    }
+
+    function toggleExerciseTimer(exIdx) {
+      if (appState.exerciseStartTimes[exIdx]) {
+        delete appState.exerciseStartTimes[exIdx];
+      } else {
+        appState.exerciseStartTimes[exIdx] = Date.now();
+      }
+      renderWorkoutScreen();
+    }
+
+    function showFormModal(exIdx) {
+      const ex = appState.currentSession.exercises[exIdx];
+      document.getElementById('formModalTitle').textContent = ex.name;
+      
+      const gifUrl = exerciseGIFs[ex.id];
+      let modalContent = '';
+      
+      if (gifUrl && gifUrl.startsWith('http')) {
+        // Display actual GIF URL
+        modalContent = `
+          <div style="margin-bottom: 15px; text-align: center;">
+            <img src="${gifUrl}" style="width: 100%; max-width: 350px; border-radius: 6px; margin-bottom: 10px;" alt="${ex.name}" onerror="this.style.display='none'" />
+          </div>
+        `;
+      } else if (gifUrl) {
+        // Display search prompt
+        modalContent = `
+          <div style="background-color: ${themes[appState.theme].cardBg}; padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 3px solid #3B82F6;">
+            <p style="margin: 0 0 10px 0; font-size: 12px; opacity: 0.8;">🔍 Copy & search on Google Images:</p>
+            <div style="background-color: ${themes[appState.theme].secondary}; padding: 10px; border-radius: 4px; margin-bottom: 10px; word-break: break-all; cursor: pointer; user-select: all;" title="Click to select and copy">
+              <code style="font-size: 12px;">${gifUrl}</code>
+            </div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.7;">→ google.com/images → Paste → Find GIF → Right-click → Copy image URL</p>
+          </div>
+        `;
+      }
+      
+      const tips = `
+        <p style="font-size: 13px; opacity: 0.7; margin-top: 0; padding-top: 10px; border-top: 1px solid ${themes[appState.theme].border};">
+          ${ex.type === 'compound' ? '💪 Compound: Moderate weight, full range, stop 1-2 reps before failure' : '🎯 Isolation: Light weight, controlled movement, focus on target muscle'}
+        </p>
+      `;
+      
+      document.getElementById('formModalBody').innerHTML = modalContent + tips;
+      document.getElementById('formModal').classList.add('active');
+    }
+
+    function closeFormModal() {
+      document.getElementById('formModal').classList.remove('active');
+    }
+
+    function completeWorkout() {
+      const totalTime = Math.floor((Date.now() - appState.workoutStartTime) / 1000);
+      appState.currentSession.totalTime = totalTime;
+      appState.sessions.push(appState.currentSession);
+      saveState();
+
+      if (appState.isRestartMode && appState.restartWeek === 2) {
+        if (confirm('🎉 Week 2 complete! Ready to switch to normal mode (3 sets)?')) {
+          endRestartMode();
+        }
+      }
+
+      appState.currentSession = null;
+      appState.workoutStartTime = null;
+      appState.exerciseStartTimes = {};
+      appState.currentDay = null;
+
+      alert('✓ Workout saved!');
+      showScreen('homeScreen');
+    }
+
+    function cancelWorkout() {
+      if (confirm('Cancel workout? Data will be lost.')) {
+        appState.currentSession = null;
+        appState.workoutStartTime = null;
+        appState.exerciseStartTimes = {};
+        appState.currentDay = null;
+        showScreen('homeScreen');
+      }
+    }
+
+    function getLastSessionData(exerciseId) {
+      const reversedSessions = [...appState.sessions].reverse();
+      for (let session of reversedSessions) {
+        const exercise = session.exercises.find(ex => ex.id === exerciseId);
+        if (exercise) {
+          return {
+            date: session.date,
+            sets: exercise.sets
+          };
+        }
+      }
+      return null;
+    }
+
+    function renderProgressScreen() {
+      const exercises = Object.values(appState.schedule).flat();
+      const uniqueExercises = Array.from(new Map(exercises.map(ex => [ex.id, ex])).values());
+
+      const select = document.getElementById('exerciseSelect');
+      select.innerHTML = uniqueExercises.map(ex => 
+        `<option value="${ex.id}">${ex.name}</option>`
+      ).join('');
+
+      updateProgressChart();
+    }
+
+    function updateProgressChart() {
+      const exerciseId = document.getElementById('exerciseSelect').value;
+      const data = getProgressData(exerciseId);
+
+      const content = document.getElementById('progressContent');
+      if (data.length === 0) {
+        content.innerHTML = `<div class="card">No data yet for this exercise. Complete a workout to see progress!</div>`;
+        return;
+      }
+
+      const maxWeight = Math.max(...data.map(d => d.weight));
+      const minWeight = Math.min(...data.map(d => d.weight));
+      const range = maxWeight - minWeight || 1;
+
+      let chartHTML = `<div class="card"><h3>Progress</h3>`;
+      chartHTML += `<div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto;">`;
+      data.forEach((d, i) => {
+        const heightPercent = ((d.weight - minWeight) / range) * 100;
+        chartHTML += `<div style="flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 40px; height: 150px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 5px;">
+            <div style="width: 30px; background-color: ${accentColors[appState.accentColor]}; height: ${heightPercent}%; border-radius: 4px;"></div>
+          </div>
+          <small style="font-size: 10px; opacity: 0.7;">${d.date}</small>
+          <small style="font-size: 11px; font-weight: 600;">${d.weight.toFixed(0)}lbs</small>
+        </div>`;
+      });
+      chartHTML += `</div></div>`;
+
+      content.innerHTML = chartHTML;
+    }
+
+    function getProgressData(exerciseId) {
+      const data = appState.sessions
+        .filter(session => session.exercises.some(ex => ex.id === exerciseId))
+        .map(session => {
+          const exercise = session.exercises.find(ex => ex.id === exerciseId);
+          if (!exercise) return null;
+          const avgWeight = exercise.sets.reduce((sum, set) => sum + set.weight, 0) / exercise.sets.length;
+          const avgReps = exercise.sets.reduce((sum, set) => sum + set.reps, 0) / exercise.sets.length;
+          return {
+            date: session.date,
+            weight: avgWeight,
+            reps: avgReps,
+            isRestartMode: session.isRestartMode,
+            restartWeek: session.restartWeek
+          };
+        })
+        .filter(Boolean);
+      return data;
+    }
+
+    function renderScheduleScreen() {
+      const dayNames = ['Horizontal', 'Legs', 'Vertical'];
+      let html = '';
+
+      [1, 2, 3].forEach(day => {
+        const dayKey = `day${day}`;
+        const exercises = appState.schedule[dayKey];
+        html += `
+          <div class="card">
+            <h3>Day ${day} — ${dayNames[day - 1]}</h3>
+            ${exercises.map(ex => `
+              <div class="exercise-item">
+                <p class="exercise-name">${ex.name}</p>
+                <p class="exercise-meta">${ex.sets} × ${ex.reps} ${ex.type === 'compound' ? '💪' : '🎯'}</p>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      });
+
+      document.getElementById('scheduleContent').innerHTML = html;
+    }
+
+    loadState();
+    renderHomeScreen();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('data:application/javascript,self.addEventListener("install",(e)=>{self.skipWaiting()});self.addEventListener("activate",(e)=>{e.waitUntil(clients.claim())});').catch(()=>{});
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installPrompt').style.display = 'block';
+    });
+
+    document.getElementById('installBtn')?.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt = null;
+        document.getElementById('installPrompt').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

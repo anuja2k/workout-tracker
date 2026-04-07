@@ -1,0 +1,31 @@
+{
+  "name": "workout-tracker",
+  "version": "1.0.0",
+  "description": "A modern progressive web app for tracking gym workouts with progress charts and offline support",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "npx http-server -p 8000 -c-1"
+  },
+  "keywords": [
+    "workout",
+    "fitness",
+    "tracker",
+    "gym",
+    "pwa",
+    "progressive-web-app",
+    "strength-training",
+    "exercise-log",
+    "progress-tracking"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/workout-tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/workout-tracker/issues"
+  },
+  "homepage": "https://github.com/yourusername/workout-tracker#readme"
+}
