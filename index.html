@@ -480,11 +480,12 @@
 
     <!-- INITIAL SETUP MODAL -->
     <div id="setupModal" class="modal" style="background: rgba(0, 0, 0, 0.9);">
-      <div class="modal-content" style="width: 95%; max-width: 400px;">
+      <div class="modal-content" style="width: 95%; max-width: 400px; position: relative;">
+        <button onclick="closeSetupModal()" style="position:absolute; top:10px; right:10px; background:none; font-size:20px; opacity:0.6; border:none; cursor:pointer; padding:0;">✕</button>
         <div style="text-align: center;">
           <h2 style="margin: 0 0 20px 0;">💪 Welcome!</h2>
           <p style="font-size: 14px; margin: 0 0 20px 0; opacity: 0.8;">Choose your style</p>
-          
+
           <div style="margin-bottom: 25px;">
             <p style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">THEME</p>
             <div class="button-group" style="gap: 15px;">
@@ -496,14 +497,12 @@
           <div>
             <p style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">ACCENT COLOR</p>
             <div class="button-group" style="gap: 10px; justify-content: center;">
-              <button onclick="selectAccentColor('blue')" id="setupColorBlue" style="width: 50px; height: 50px; border-radius: 50%; background: #3B82F6; border: 3px solid transparent; padding: 0;"></button>
-              <button onclick="selectAccentColor('green')" id="setupColorGreen" style="width: 50px; height: 50px; border-radius: 50%; background: #10B981; border: 3px solid transparent; padding: 0;"></button>
-              <button onclick="selectAccentColor('purple')" id="setupColorPurple" style="width: 50px; height: 50px; border-radius: 50%; background: #8B5CF6; border: 3px solid transparent; padding: 0;"></button>
-              <button onclick="selectAccentColor('orange')" id="setupColorOrange" style="width: 50px; height: 50px; border-radius: 50%; background: #F97316; border: 3px solid transparent; padding: 0;"></button>
+              <button onclick="selectAccentColor('blue')" id="setupColorBlue" style="width: 50px; height: 50px; border-radius: 50%; background: #3B82F6; border: 3px solid transparent; padding: 0; flex-shrink: 0;"></button>
+              <button onclick="selectAccentColor('green')" id="setupColorGreen" style="width: 50px; height: 50px; border-radius: 50%; background: #10B981; border: 3px solid transparent; padding: 0; flex-shrink: 0;"></button>
+              <button onclick="selectAccentColor('purple')" id="setupColorPurple" style="width: 50px; height: 50px; border-radius: 50%; background: #8B5CF6; border: 3px solid transparent; padding: 0; flex-shrink: 0;"></button>
+              <button onclick="selectAccentColor('orange')" id="setupColorOrange" style="width: 50px; height: 50px; border-radius: 50%; background: #F97316; border: 3px solid transparent; padding: 0; flex-shrink: 0;"></button>
             </div>
           </div>
-
-          <p style="font-size: 11px; opacity: 0.6; margin-top: 20px; margin-bottom: 0;">Auto-closing in <span id="setupCountdown">10</span>s</p>
         </div>
       </div>
     </div>
@@ -522,8 +521,11 @@
       sessions: [],
       isRestartMode: false,
       restartWeek: 1,
-      showedInitialSetup: false
+      showedInitialSetup: false,
+      workoutDefaults: {}
     };
+
+    let setupState = { themeSelected: false, colorSelected: false };
 
     // EXERCISE GIFs - For Day 2 & 3, copy the search text and paste into Google Images
     const exerciseGIFs = {
@@ -577,6 +579,20 @@
       }
     };
 
+    const STRETCHES = {
+      1: ['Chest Stretch', 'Shoulder Stretch', 'Tricep Stretch', 'Back Stretch'],
+      2: ['Quad Stretch', 'Hamstring Stretch', 'Hip Flexor Stretch', 'Calf Stretch'],
+      3: ['Lat Stretch', 'Shoulder Stretch', 'Upper Back Stretch', 'Neck Stretch']
+    };
+
+    function getWarmupStretches(day) {
+      return STRETCHES[day].map(name => ({ name, done: false }));
+    }
+
+    function getCooldownStretches(day) {
+      return STRETCHES[day].map(name => ({ name, done: false }));
+    }
+
     function getDefaultSchedule() {
       return {
         day1: [
@@ -614,6 +630,7 @@
         appState.isRestartMode = loaded.isRestartMode || false;
         appState.restartWeek = loaded.restartWeek || 1;
         appState.showedInitialSetup = loaded.showedInitialSetup || false;
+        appState.workoutDefaults = loaded.workoutDefaults || {};
       }
 
       const savedSchedule = localStorage.getItem('workoutSchedule');
@@ -623,7 +640,7 @@
       appState.sessions = savedSessions ? JSON.parse(savedSessions) : [];
 
       applyTheme();
-      
+
       // Show setup modal on first load
       if (!appState.showedInitialSetup) {
         showSetupModal();
@@ -636,7 +653,8 @@
         accentColor: appState.accentColor,
         isRestartMode: appState.isRestartMode,
         restartWeek: appState.restartWeek,
-        showedInitialSetup: appState.showedInitialSetup
+        showedInitialSetup: appState.showedInitialSetup,
+        workoutDefaults: appState.workoutDefaults
       }));
       localStorage.setItem('workoutSchedule', JSON.stringify(appState.schedule));
       localStorage.setItem('workoutSessions', JSON.stringify(appState.sessions));
@@ -774,9 +792,17 @@
         day,
         exercises: dayExercises.map(ex => ({
           ...ex,
-          sets: Array(sets).fill().map(() => ({ weight: 0, reps: 0 })),
+          sets: Array(sets).fill().map(() => ({ weight: 0, reps: 0, completed: false })),
           exerciseTime: 0
         })),
+        warmup: {
+          treadmill: { time: appState.workoutDefaults.warmupTreadmill?.time || 10, speed: appState.workoutDefaults.warmupTreadmill?.speed || 5, done: false },
+          stretches: getWarmupStretches(day)
+        },
+        cooldown: {
+          stretches: getCooldownStretches(day),
+          treadmill: { time: appState.workoutDefaults.cooldownTreadmill?.time || 10, speed: appState.workoutDefaults.cooldownTreadmill?.speed || 2.5, done: false }
+        },
         isRestartMode: appState.isRestartMode,
         restartWeek: appState.restartWeek,
         id: Date.now().toString()
@@ -800,8 +826,51 @@
         restartInfo.style.display = 'none';
       }
 
-      const list = document.getElementById('exercisesList');
-      list.innerHTML = appState.currentSession.exercises.map((ex, exIdx) => `
+      const accentColor = accentColors[appState.accentColor];
+      const warmup = appState.currentSession.warmup;
+      const cooldown = appState.currentSession.cooldown;
+      const themeBorder = themes[appState.theme].border;
+
+      // Build warmup section
+      const warmupHTML = `
+        <div class="card">
+          <h3 style="margin: 0 0 15px 0;">🏃 Warm-up <span style="font-size:12px;opacity:0.6;">(5-10 mins)</span></h3>
+
+          <div style="margin-bottom: 15px;">
+            <p style="font-size:13px;font-weight:600;margin:0 0 4px 0;">Treadmill</p>
+            <p style="font-size:11px;opacity:0.5;margin:0 0 8px 0;">Gently increase heart rate</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+              <div>
+                <label style="display:block;font-size:12px;margin-bottom:4px;">Time (mins)</label>
+                <input type="number" value="${warmup.treadmill.time}" onchange="updateWarmupTreadmill('time',this.value)" style="width:100%;"/>
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;margin-bottom:4px;">Speed (kph)</label>
+                <input type="number" value="${warmup.treadmill.speed}" onchange="updateWarmupTreadmill('speed',this.value)" style="width:100%;"/>
+              </div>
+            </div>
+            <button onclick="toggleWarmupTreadmill()" style="width:100%;padding:8px;background:${warmup.treadmill.done ? accentColor : 'transparent'};color:${warmup.treadmill.done ? '#fff' : 'inherit'};border:1px solid ${accentColor};border-radius:4px;cursor:pointer;font-weight:600;">
+              ${warmup.treadmill.done ? '✓ Done' : 'Mark Done'}
+            </button>
+          </div>
+
+          <div style="border-top:1px solid ${themeBorder};padding-top:12px;">
+            <p style="font-size:13px;font-weight:600;margin:0 0 12px 0;">Stretches</p>
+            ${warmup.stretches.map((s, i) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid ${themeBorder};">
+                <span style="${s.done ? 'opacity:0.5;text-decoration:line-through;' : ''}">${s.name}</span>
+                <button onclick="toggleWarmupStretch(${i})" style="padding:4px 10px;font-size:12px;background:${s.done ? accentColor : 'transparent'};color:${s.done ? '#fff' : 'inherit'};border:1px solid ${accentColor};border-radius:4px;cursor:pointer;">
+                  ${s.done ? '✓' : 'Done'}
+                </button>
+              </div>
+            `).join('')}
+            <p style="font-size:11px;opacity:0.5;margin:8px 0 0 0;">Improves flexibility & reduces injury risk</p>
+          </div>
+        </div>
+      `;
+
+      // Build exercises section
+      const exercisesHTML = appState.currentSession.exercises.map((ex, exIdx) => `
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
             <div>
@@ -829,27 +898,81 @@
             </div>
           </div>
 
-          ${appState.currentSession.exercises[exIdx].sets.map((set, setIdx) => `
+          ${appState.currentSession.exercises[exIdx].sets.map((set, setIdx) => {
+            const lastData = getLastSessionData(ex.id);
+            const lastSet = lastData && lastData.sets[setIdx];
+            const prevText = lastSet && lastSet.weight
+              ? `Previous: ${lastSet.weight} ${ex.unit || 'lbs'}`
+              : 'Previous: Not tracked';
+            return `
             <div class="set-input-group">
               <div>
                 <label>Set ${setIdx + 1} Weight (${appState.currentSession.exercises[exIdx].unit || 'lbs'})</label>
                 <input type="number" placeholder="0" value="${set.weight || ''}" onchange="updateSet(${exIdx}, ${setIdx}, 'weight', this.value)" />
+                <p style="font-size:11px;opacity:0.5;margin:3px 0 0 4px;">${prevText}</p>
               </div>
               <div>
                 <label>Reps</label>
                 <input type="number" placeholder="0" value="${set.reps || ''}" onchange="updateSet(${exIdx}, ${setIdx}, 'reps', this.value)" />
+                <button onclick="toggleSetComplete(${exIdx}, ${setIdx})" style="width:100%;padding:6px;margin-top:8px;background:${set.completed ? accentColor : 'transparent'};color:${set.completed ? '#fff' : 'inherit'};border:1px solid ${accentColor};border-radius:4px;cursor:pointer;font-weight:600;">✓</button>
               </div>
             </div>
-          `).join('')}
+          `;}).join('')}
 
-          ${getLastSessionData(ex.id) ? `
-            <div class="reference-box">
-              <strong>Last:</strong> ${getLastSessionData(ex.id).sets.map(s => `${s.weight}×${s.reps}`).join(', ')}
-            </div>
-          ` : ''}
+          <div style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+            ${appState.currentSession.exercises[exIdx].sets.map(s => {
+              return `<span style="width:12px;height:12px;border-radius:50%;background:${s.completed ? accentColor : 'transparent'};border:2px solid ${accentColor};display:inline-block;"></span>`;
+            }).join('')}
+            <span style="font-size:12px;opacity:0.7;">${appState.currentSession.exercises[exIdx].sets.filter(s => s.completed).length}/${appState.currentSession.exercises[exIdx].sets.length} Sets Complete</span>
+          </div>
         </div>
       `).join('');
-      
+
+      // Build cooldown section
+      const cooldownHTML = `
+        <div class="card">
+          <h3 style="margin: 0 0 15px 0;">🧘 Cool-down <span style="font-size:12px;opacity:0.6;">(5-10 mins)</span></h3>
+
+          <div style="border-bottom:1px solid ${themeBorder};padding-bottom:12px;margin-bottom:12px;">
+            <p style="font-size:13px;font-weight:600;margin:0 0 12px 0;">Stretches</p>
+            ${cooldown.stretches.map((s, i) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid ${themeBorder};">
+                <span style="${s.done ? 'opacity:0.5;text-decoration:line-through;' : ''}">${s.name}</span>
+                <button onclick="toggleCooldownStretch(${i})" style="padding:4px 10px;font-size:12px;background:${s.done ? accentColor : 'transparent'};color:${s.done ? '#fff' : 'inherit'};border:1px solid ${accentColor};border-radius:4px;cursor:pointer;">
+                  ${s.done ? '✓' : 'Done'}
+                </button>
+              </div>
+            `).join('')}
+            <p style="font-size:11px;opacity:0.5;margin:8px 0 0 0;">Gently decrease heart rate & aids recovery</p>
+          </div>
+
+          <div>
+            <p style="font-size:13px;font-weight:600;margin:0 0 4px 0;">Treadmill</p>
+            <p style="font-size:11px;opacity:0.5;margin:0 0 8px 0;">Light walk to gradually lower heart rate</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+              <div>
+                <label style="display:block;font-size:12px;margin-bottom:4px;">Time (mins)</label>
+                <input type="number" value="${cooldown.treadmill.time}" onchange="updateCooldownTreadmill('time',this.value)" style="width:100%;"/>
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;margin-bottom:4px;">Speed (kph)</label>
+                <input type="number" value="${cooldown.treadmill.speed}" onchange="updateCooldownTreadmill('speed',this.value)" style="width:100%;"/>
+              </div>
+            </div>
+            <button onclick="toggleCooldownTreadmill()" style="width:100%;padding:8px;background:${cooldown.treadmill.done ? accentColor : 'transparent'};color:${cooldown.treadmill.done ? '#fff' : 'inherit'};border:1px solid ${accentColor};border-radius:4px;cursor:pointer;font-weight:600;">
+              ${cooldown.treadmill.done ? '✓ Done' : 'Mark Done'}
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Build full content
+      const list = document.getElementById('exercisesList');
+      list.innerHTML = warmupHTML +
+        `<p style="font-size:12px;font-weight:700;opacity:0.6;margin:15px 0 5px 0;">MAIN SESSION</p>` +
+        exercisesHTML +
+        cooldownHTML;
+
       // Update unit buttons after rendering
       appState.currentSession.exercises.forEach((_, exIdx) => {
         setTimeout(() => updateUnitButtons(exIdx), 50);
@@ -858,6 +981,12 @@
 
     function updateSet(exIdx, setIdx, field, value) {
       appState.currentSession.exercises[exIdx].sets[setIdx][field] = parseFloat(value) || 0;
+    }
+
+    function toggleSetComplete(exIdx, setIdx) {
+      appState.currentSession.exercises[exIdx].sets[setIdx].completed =
+        !appState.currentSession.exercises[exIdx].sets[setIdx].completed;
+      renderWorkoutScreen();
     }
 
     function toggleExerciseTimer(exIdx) {
@@ -913,42 +1042,50 @@
     // SETUP MODAL FUNCTIONS
     function showSetupModal() {
       document.getElementById('setupModal').classList.add('active');
+      setupState = { themeSelected: false, colorSelected: false };
       updateSetupUI();
-      
-      let countdown = 10;
-      const countdownInterval = setInterval(() => {
-        countdown--;
-        const el = document.getElementById('setupCountdown');
-        if (el) el.textContent = countdown;
-        
-        if (countdown <= 0) {
-          clearInterval(countdownInterval);
-          closeSetupModal();
-        }
-      }, 1000);
     }
 
     function closeSetupModal() {
+      if (!appState.showedInitialSetup) {
+        appState.theme = appState.theme || 'dark';
+        appState.accentColor = appState.accentColor || 'orange';
+        appState.showedInitialSetup = true;
+        applyTheme();
+        saveState();
+      }
       document.getElementById('setupModal').classList.remove('active');
+    }
+
+    function tryAutoCloseSetup() {
+      if (setupState.themeSelected && setupState.colorSelected) {
+        appState.showedInitialSetup = true;
+        saveState();
+        closeSetupModal();
+      }
     }
 
     function selectTheme(theme) {
       appState.theme = theme;
+      setupState.themeSelected = true;
       applyTheme();
       updateSetupUI();
+      tryAutoCloseSetup();
     }
 
     function selectAccentColor(color) {
       appState.accentColor = color;
+      setupState.colorSelected = true;
       applyTheme();
       updateSetupUI();
+      tryAutoCloseSetup();
     }
 
     function updateSetupUI() {
       // Update theme buttons
       document.getElementById('setupThemeDark').style.borderColor = appState.theme === 'dark' ? accentColors[appState.accentColor] : 'transparent';
       document.getElementById('setupThemeLight').style.borderColor = appState.theme === 'light' ? accentColors[appState.accentColor] : 'transparent';
-      
+
       // Update color buttons
       ['blue', 'green', 'purple', 'orange'].forEach(color => {
         const btn = document.getElementById(`setupColor${color.charAt(0).toUpperCase() + color.slice(1)}`);
@@ -992,7 +1129,7 @@
       const unit = appState.currentSession.exercises[exIdx].unit || 'lbs';
       const lbsBtn = document.getElementById(`unitBtn-${exIdx}-lbs`);
       const kgBtn = document.getElementById(`unitBtn-${exIdx}-kg`);
-      
+
       if (lbsBtn) {
         lbsBtn.style.backgroundColor = unit === 'lbs' ? accentColors[appState.accentColor] : themes[appState.theme].cardBg;
         lbsBtn.style.color = unit === 'lbs' ? '#fff' : 'inherit';
@@ -1001,6 +1138,45 @@
         kgBtn.style.backgroundColor = unit === 'kg' ? accentColors[appState.accentColor] : themes[appState.theme].cardBg;
         kgBtn.style.color = unit === 'kg' ? '#fff' : 'inherit';
       }
+    }
+
+    // WARMUP/COOLDOWN FUNCTIONS
+    function updateWarmupTreadmill(field, value) {
+      appState.currentSession.warmup.treadmill[field] = parseFloat(value) || 0;
+    }
+
+    function toggleWarmupTreadmill() {
+      const t = appState.currentSession.warmup.treadmill;
+      t.done = !t.done;
+      if (t.done) {
+        appState.workoutDefaults.warmupTreadmill = { time: t.time, speed: t.speed };
+        saveState();
+      }
+      renderWorkoutScreen();
+    }
+
+    function toggleWarmupStretch(idx) {
+      appState.currentSession.warmup.stretches[idx].done = !appState.currentSession.warmup.stretches[idx].done;
+      renderWorkoutScreen();
+    }
+
+    function updateCooldownTreadmill(field, value) {
+      appState.currentSession.cooldown.treadmill[field] = parseFloat(value) || 0;
+    }
+
+    function toggleCooldownTreadmill() {
+      const t = appState.currentSession.cooldown.treadmill;
+      t.done = !t.done;
+      if (t.done) {
+        appState.workoutDefaults.cooldownTreadmill = { time: t.time, speed: t.speed };
+        saveState();
+      }
+      renderWorkoutScreen();
+    }
+
+    function toggleCooldownStretch(idx) {
+      appState.currentSession.cooldown.stretches[idx].done = !appState.currentSession.cooldown.stretches[idx].done;
+      renderWorkoutScreen();
     }
 
     function completeWorkout() {
